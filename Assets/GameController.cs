@@ -7,14 +7,14 @@ using UnityEngine.SceneManagement;
 public class GameController : MonoBehaviour
 {
     [Header("--- UI SCORE & STATUS ---")]
-    public TextMeshProUGUI statusText; // Hiện kết quả, thông báo
-    public TextMeshProUGUI scoreText;  // Hiện tỷ số "3 : 2"
+    public TextMeshProUGUI statusText;
+    public TextMeshProUGUI scoreText;
 
     [Header("--- UI CHAT ---")]
-    public GameObject chatPanel;       // Cái khung chat (Box History)
-    public TMP_InputField chatInput;   // Ô nhập chat
-    public TextMeshProUGUI chatHistory;// Text chứa lịch sử chat
-    public ScrollRect chatScroll;      // Thanh cuộn chat
+    public GameObject chatPanel;
+    public TMP_InputField chatInput;
+    public TextMeshProUGUI chatHistory;
+    public ScrollRect chatScroll;
 
     [Header("--- BATTLE AREA ---")]
     public Image playerHandImg;
@@ -32,25 +32,23 @@ public class GameController : MonoBehaviour
     public Button btnBua;
     public Button btnBao;
     public Button btnQuit;
-    public Button btnChat;      // Nút mở chat
-    public Button btnCloseChat; // Nút tắt chat (dấu X trong box)
+    public Button btnChat;
+    public Button btnCloseChat;
 
     private Color originalColor;
+    int countRound = 1;
 
     void Start()
     {
-        // 1. Setup Chat mặc định
-        if (chatPanel) chatPanel.SetActive(false); // Mới vào ẩn chat đi
+        if (chatPanel) chatPanel.SetActive(false);
         if (chatHistory) chatHistory.text = "";
 
-        // 2. Setup Score & Status
         if (statusText) originalColor = statusText.color;
         if (scoreText) scoreText.text = "0 : 0";
 
-        // 3. Check Socket
         if (ClientSocket.Instance == null)
         {
-            SceneManager.LoadScene("HomeScene");
+            SceneManager.LoadScene("home");
             return;
         }
         ClientSocket.Instance.OnMessageReceived += ProcessMessage;
@@ -60,17 +58,14 @@ public class GameController : MonoBehaviour
             SetupGameStart();
         }
 
-        // 4. Gán sự kiện cho các nút
-        if (btnKeo) btnKeo.onClick.AddListener(() => SendMove("SCISSORS"));
-        if (btnBua) btnBua.onClick.AddListener(() => SendMove("ROCK"));
-        if (btnBao) btnBao.onClick.AddListener(() => SendMove("PAPER"));
-        if (btnQuit) btnQuit.onClick.AddListener(Disconnect);
+        if (btnKeo) btnKeo.onClick.AddListener(() => { SendMove("SCISSORS"); AudioManager.Instance.PlaySelect(); });
+        if (btnBua) btnBua.onClick.AddListener(() => { SendMove("ROCK"); AudioManager.Instance.PlaySelect(); });
+        if (btnBao) btnBao.onClick.AddListener(() => { SendMove("PAPER"); AudioManager.Instance.PlaySelect(); });
+        if (btnQuit) btnQuit.onClick.AddListener(() => { Disconnect(); AudioManager.Instance.PlayClick(); });
 
-        // --- SỰ KIỆN NÚT CHAT ---
-        if (btnChat) btnChat.onClick.AddListener(ToggleChat);       // Nút Chat chính (Bật/Tắt)
-        if (btnCloseChat) btnCloseChat.onClick.AddListener(CloseChat); // Nút X (Chỉ tắt)
+        if (btnChat) btnChat.onClick.AddListener(() => { ToggleChat(); AudioManager.Instance.PlayClick(); });
+        if (btnCloseChat) btnCloseChat.onClick.AddListener(() => { CloseChat(); AudioManager.Instance.PlayClick(); });
 
-        // Sự kiện Enter để gửi chat
         if (chatInput) chatInput.onSubmit.AddListener(SendChatMessage);
 
         ResetHands();
@@ -98,7 +93,6 @@ public class GameController : MonoBehaviour
                 break;
 
             case "RESULT":
-                // Xử lý kết quả trận đấu & Tỷ số
                 string result = ExtractValue(content, "Result:");
                 string myMove = ExtractValue(content, "You:");
                 string oppMove = ExtractValue(content, "Opponent:");
@@ -117,29 +111,24 @@ public class GameController : MonoBehaviour
                 StartCoroutine(HandleGameOver(content));
                 break;
 
-            // --- XỬ LÝ TIN NHẮN CHAT TỪ SERVER GỬI VỀ ---
             case "CHAT":
                 if (chatHistory)
                 {
                     chatHistory.text += content + "\n";
+                    AudioManager.Instance.PlayClick();
                     ScrollToBottom();
-
-                    // (Tùy chọn) Nếu muốn tin nhắn đến thì tự bật khung chat lên:
-                    // if (chatPanel && !chatPanel.activeSelf) chatPanel.SetActive(true);
+                    if (chatPanel && !chatPanel.activeSelf) chatPanel.SetActive(true);
                 }
                 break;
         }
     }
 
-    // ======================================================
-    // LOGIC CHAT (Bật/Tắt/Gửi)
-    // ======================================================
     void ToggleChat()
     {
         if (chatPanel)
         {
             bool isActive = chatPanel.activeSelf;
-            chatPanel.SetActive(!isActive); // Đang bật thì tắt, đang tắt thì bật
+            chatPanel.SetActive(!isActive);
         }
     }
 
@@ -152,10 +141,8 @@ public class GameController : MonoBehaviour
     {
         if (string.IsNullOrEmpty(message)) return;
 
-        // Gửi lên Server (Server sẽ gửi lại cho cả 2 người)
         ClientSocket.Instance.SendData("CHAT|" + message);
 
-        // Xóa ô nhập liệu và focus lại để gõ tiếp
         if (chatInput)
         {
             chatInput.text = "";
@@ -172,22 +159,29 @@ public class GameController : MonoBehaviour
         }
     }
 
-    // ======================================================
-    // LOGIC GAMEPLAY
-    // ======================================================
     IEnumerator HandleGameOver(string result)
     {
         yield return new WaitForSeconds(2.0f);
         if (result == "WIN")
         {
-            if (statusText) { statusText.text = "VICTORY!"; statusText.color = Color.green; }
+            if (statusText)
+            {
+                statusText.text = "Win";
+                statusText.color = Color.green;
+                AudioManager.Instance.PlayWin();
+            }
         }
         else
         {
-            if (statusText) { statusText.text = "DEFEAT!"; statusText.color = Color.red; }
+            if (statusText)
+            {
+                statusText.text = "Lose";
+                statusText.color = Color.red;
+                AudioManager.Instance.PlayLose();
+            }
         }
         yield return new WaitForSeconds(3.0f);
-        Debug.Log("Back home!");
+
         if (ClientSocket.Instance != null)
         {
             ClientSocket.Instance.Disconnect();
@@ -197,7 +191,7 @@ public class GameController : MonoBehaviour
 
     void SetupGameStart()
     {
-        if (statusText) { statusText.text = "START!"; statusText.color = originalColor; }
+        if (statusText) { statusText.text = "Start"; statusText.color = originalColor; }
         ResetHands();
         EnableButtons(true);
     }
@@ -205,15 +199,15 @@ public class GameController : MonoBehaviour
     void SendMove(string move)
     {
         ClientSocket.Instance.SendData("MOVE|" + move);
-        if (statusText) statusText.text = move + ". WAIT...";
+        if (statusText) statusText.text = "Waiting";
         ShowWaitingHands();
         EnableButtons(false);
     }
 
     void Disconnect()
     {
-        if (ClientSocket.Instance) ClientSocket.Instance.isGameStarted = false;
-        SceneManager.LoadScene("HomeScene");
+        if (ClientSocket.Instance) ClientSocket.Instance.Disconnect();
+        SceneManager.LoadScene("home");
     }
 
     void ShowWaitingHands()
@@ -239,7 +233,8 @@ public class GameController : MonoBehaviour
 
     void ResetRound()
     {
-        if (statusText) statusText.text = "NEW ROUND!";
+        countRound++;
+        if (statusText) statusText.text = "Round " + countRound;
         EnableButtons(true);
         playerHandImg.gameObject.SetActive(true);
         enemyHandImg.gameObject.SetActive(true);
