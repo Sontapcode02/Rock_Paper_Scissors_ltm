@@ -42,7 +42,10 @@ public class GameController : MonoBehaviour
     {
         if (chatPanel) chatPanel.SetActive(false);
         if (chatHistory) chatHistory.text = "";
-
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayGameMusic();
+        }
         if (statusText) originalColor = statusText.color;
         if (scoreText) scoreText.text = "0 : 0";
 

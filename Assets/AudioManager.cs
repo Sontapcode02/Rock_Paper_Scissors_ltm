@@ -9,7 +9,8 @@ public class AudioManager : MonoBehaviour
     public AudioSource sfxSource;
 
     [Header("--- AUDIO CLIPS ---")]
-    public AudioClip backgroundMusic;
+    public AudioClip gameMusic;
+    public AudioClip homeMusic;
     public AudioClip clickSound;
     public AudioClip winSound;
     public AudioClip loseSound;
@@ -33,12 +34,12 @@ public class AudioManager : MonoBehaviour
 
     void Start()
     {
-        PlayMusic(backgroundMusic);
+        PlayMusic(homeMusic);
     }
 
     public void PlayMusic(AudioClip clip)
     {
-        if (clip == null) return;
+        if (musicSource.clip == clip && musicSource.isPlaying) return;
         musicSource.clip = clip;
         musicSource.loop = true;
         musicSource.Play();
@@ -49,7 +50,8 @@ public class AudioManager : MonoBehaviour
         if (clip == null) return;
         sfxSource.PlayOneShot(clip);
     }
-
+    public void PlayHomeMusic() => PlayMusic(homeMusic);
+    public void PlayGameMusic() => PlayMusic(gameMusic);
     public void PlayClick() => PlaySFX(clickSound);
     public void PlaySelect() => PlaySFX(selectSound);
     public void PlayWin() => PlaySFX(winSound);

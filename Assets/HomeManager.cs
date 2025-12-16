@@ -41,6 +41,11 @@ public class HomeManager : MonoBehaviour
         joinRoomPanel.SetActive(false);
         loadingPanel.SetActive(false);
 
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayHomeMusic();
+        }
+
         if (ClientSocket.Instance != null)
         {
             ClientSocket.Instance.OnMessageReceived += HandleServerMessage;

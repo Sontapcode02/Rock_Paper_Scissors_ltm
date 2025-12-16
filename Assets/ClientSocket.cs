@@ -12,8 +12,8 @@ public class ClientSocket : MonoBehaviour
     public Action OnConnected;
 
     [Header("Server Config")]
-    public string serverIP = "147.185.221.24";
-    public int serverPort = 28224;
+    public string serverIP = "127.0.0.1";
+    public int serverPort = 65432;
 
     private TcpClient client;
     private NetworkStream stream;
